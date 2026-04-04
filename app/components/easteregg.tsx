@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 
 const EggTop = () => (
   <svg width="120" height="90" viewBox="0 0 160 120">
@@ -29,51 +29,12 @@ export default function EasterEgg() {
   const [memes, setMemes] = useState<any[]>([]);
   const [confetti, setConfetti] = useState<any[]>([]);
   const [particles, setParticles] = useState<any[]>([]);
-  const [timeLeft, setTimeLeft] = useState({ hours: 0, minutes: 0, seconds: 0 });
-  const [isUnlocked, setIsUnlocked] = useState(false);
 
   const memeSrcs = ["/mem1.png", "/mem2.png", "/mem3.png"];
   const confettiColors = ["#FF6B9D", "#C44569", "#FFC312", "#12CBC4", "#FDA7DF", "#ED4C67", "#F79F1F", "#A3CB38", "#FF5733", "#C70039", "#900C3F", "#581845"];
 
-  // Calculate time until midnight
-  useEffect(() => {
-    const calculateTimeLeft = () => {
-      const now = new Date();
-      const midnight = new Date();
-      
-      // Set to next midnight (tomorrow at 00:00:00)
-      midnight.setDate(midnight.getDate() + 1);
-      midnight.setHours(0, 0, 0, 0);
-      
-      const difference = midnight.getTime() - now.getTime();
-      
-      if (difference <= 0) {
-        setIsUnlocked(true);
-        return { hours: 0, minutes: 0, seconds: 0 };
-      }
-      
-      const hours = Math.floor(difference / (1000 * 60 * 60));
-      const minutes = Math.floor((difference % (1000 * 60 * 60)) / (1000 * 60));
-      const seconds = Math.floor((difference % (1000 * 60)) / 1000);
-      
-      setIsUnlocked(false);
-      return { hours, minutes, seconds };
-    };
-
-    // Initial calculation
-    setTimeLeft(calculateTimeLeft());
-
-    // Update every second
-    const timer = setInterval(() => {
-      const newTimeLeft = calculateTimeLeft();
-      setTimeLeft(newTimeLeft);
-    }, 1000);
-
-    return () => clearInterval(timer);
-  }, []);
-
   const handleOpen = () => {
-    if (!isUnlocked || isOpen) return;
+    if (isOpen) return;
     setIsOpen(true);
 
     // Generate Memes with more randomization
@@ -240,7 +201,7 @@ export default function EasterEgg() {
       <div className="relative">
         <div 
           className={`bg-white/70 backdrop-blur-sm rounded-3xl shadow-2xl p-12 max-w-2xl mx-auto text-center ${
-            isUnlocked ? 'cursor-pointer hover:shadow-3xl' : 'cursor-not-allowed'
+            'cursor-pointer hover:shadow-3xl'
           } transition-shadow relative z-20`}
           onClick={handleOpen}
         >
@@ -254,67 +215,30 @@ export default function EasterEgg() {
             The hunt for memes begins
           </p>
 
-          {/* Interactive Egg or Countdown Timer */}
+          {/* Interactive Egg */}
           <div className="mt-8 relative">
-            {!isUnlocked ? (
-              // Countdown Timer
+            <div 
+              className={`transition-all duration-700 ${isOpen ? 'opacity-0 scale-0' : 'opacity-100 scale-100'}`}
+              style={{ transformOrigin: 'center' }}
+            >
               <div className="flex flex-col items-center">
-                <div className="bg-gradient-to-r from-purple-600 to-pink-600 text-white px-8 py-6 rounded-2xl shadow-xl mb-4">
-                  <p className="text-sm font-semibold mb-2 uppercase tracking-wide">Unlocks in</p>
-                  <div className="flex gap-4 text-center">
-                    <div className="flex flex-col">
-                      <span className="text-4xl font-bold">{String(timeLeft.hours).padStart(2, '0')}</span>
-                      <span className="text-xs mt-1 opacity-80">Hours</span>
-                    </div>
-                    <span className="text-4xl font-bold">:</span>
-                    <div className="flex flex-col">
-                      <span className="text-4xl font-bold">{String(timeLeft.minutes).padStart(2, '0')}</span>
-                      <span className="text-xs mt-1 opacity-80">Minutes</span>
-                    </div>
-                    <span className="text-4xl font-bold">:</span>
-                    <div className="flex flex-col">
-                      <span className="text-4xl font-bold">{String(timeLeft.seconds).padStart(2, '0')}</span>
-                      <span className="text-xs mt-1 opacity-80">Seconds</span>
-                    </div>
-                  </div>
+                <div 
+                  className={`transition-all duration-700 ${isOpen ? '-translate-y-96 -rotate-90' : ''}`}
+                >
+                  <EggTop />
                 </div>
-                <div className="opacity-50 grayscale pointer-events-none">
-                  <div className="flex flex-col items-center">
-                    <EggTop />
-                    <div className="-mt-6">
-                      <EggBottom />
-                    </div>
-                  </div>
+                <div 
+                  className={`-mt-6 transition-all duration-700 ${isOpen ? 'translate-y-96 rotate-60' : ''}`}
+                >
+                  <EggBottom />
                 </div>
-                <p className="mt-4 text-sm text-gray-500 font-medium">
-                  🔒 Egg locked until midnight
+              </div>
+              {!isOpen && (
+                <p className="mt-4 text-sm text-gray-600 font-medium animate-pulse">
+                  Click to crack the egg! 🥚
                 </p>
-              </div>
-            ) : (
-              // Interactive Egg (when unlocked)
-              <div 
-                className={`transition-all duration-700 ${isOpen ? 'opacity-0 scale-0' : 'opacity-100 scale-100'}`}
-                style={{ transformOrigin: 'center' }}
-              >
-                <div className="flex flex-col items-center">
-                  <div 
-                    className={`transition-all duration-700 ${isOpen ? '-translate-y-96 -rotate-90' : ''}`}
-                  >
-                    <EggTop />
-                  </div>
-                  <div 
-                    className={`-mt-6 transition-all duration-700 ${isOpen ? 'translate-y-96 rotate-60' : ''}`}
-                  >
-                    <EggBottom />
-                  </div>
-                </div>
-                {!isOpen && (
-                  <p className="mt-4 text-sm text-gray-600 font-medium animate-pulse">
-                    Click to crack the egg! 🥚
-                  </p>
-                )}
-              </div>
-            )}
+              )}
+            </div>
           </div>
         </div>
 
