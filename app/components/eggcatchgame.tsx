@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 
 interface FallingEgg {
   id: number;
@@ -20,6 +20,8 @@ export default function EggCatchGame({ onClose }: { onClose: () => void }) {
   const bgMusicRef = useRef<HTMLAudioElement | null>(null);
   const popSoundRef = useRef<HTMLAudioElement | null>(null);
   const eggIdCounter = useRef(0);
+  const animationFrameRef = useRef<number>();
+  const lastUpdateRef = useRef<number>(Date.now());
 
   const eggEmojis = ["🥚", "🐣", "🐥", "🥚", "🐣"];
 
@@ -38,24 +40,41 @@ export default function EggCatchGame({ onClose }: { onClose: () => void }) {
     return () => {
       bgMusic.pause();
       bgMusic.src = '';
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
+      }
     };
   }, []);
 
-  // Mouse movement
+  // Optimized mouse movement with throttling
   useEffect(() => {
+    let rafId: number;
+    let lastX = basketX;
+
     const handleMouseMove = (e: MouseEvent) => {
       if (gameRef.current && !gameOver) {
-        const rect = gameRef.current.getBoundingClientRect();
-        const x = ((e.clientX - rect.left) / rect.width) * 100;
-        setBasketX(Math.max(5, Math.min(95, x)));
+        if (rafId) cancelAnimationFrame(rafId);
+        
+        rafId = requestAnimationFrame(() => {
+          const rect = gameRef.current!.getBoundingClientRect();
+          const x = ((e.clientX - rect.left) / rect.width) * 100;
+          const newX = Math.max(5, Math.min(95, x));
+          if (Math.abs(newX - lastX) > 0.5) {
+            setBasketX(newX);
+            lastX = newX;
+          }
+        });
       }
     };
 
-    window.addEventListener('mousemove', handleMouseMove);
-    return () => window.removeEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mousemove', handleMouseMove, { passive: true });
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      if (rafId) cancelAnimationFrame(rafId);
+    };
   }, [gameOver]);
 
-  // Spawn eggs
+  // Spawn eggs - reduced frequency
   useEffect(() => {
     if (gameOver) return;
 
@@ -64,44 +83,50 @@ export default function EggCatchGame({ onClose }: { onClose: () => void }) {
         id: eggIdCounter.current++,
         x: Math.random() * 90 + 5,
         y: -5,
-        speed: 1.5 + Math.random() * 1.5,
+        speed: 2 + Math.random() * 1,
         emoji: eggEmojis[Math.floor(Math.random() * eggEmojis.length)]
       };
       setEggs(prev => [...prev, newEgg]);
-    }, 1000);
+    }, 1200);
 
     return () => clearInterval(interval);
   }, [gameOver]);
 
-  // Update egg positions
+  // Optimized game loop using requestAnimationFrame
   useEffect(() => {
     if (gameOver) return;
 
-    const interval = setInterval(() => {
+    const gameLoop = () => {
+      const now = Date.now();
+      const deltaTime = (now - lastUpdateRef.current) / 16.67; // Normalize to 60fps
+      lastUpdateRef.current = now;
+
       setEggs(prev => {
         const updated = prev.map(egg => ({
           ...egg,
-          y: egg.y + egg.speed
+          y: egg.y + (egg.speed * deltaTime * 0.5)
         }));
 
         // Check for catches
+        const toRemove = new Set<number>();
         updated.forEach(egg => {
           if (egg.y >= 85 && egg.y <= 95) {
             const distance = Math.abs(egg.x - basketX);
-            if (distance < 8) {
-              // Caught!
+            if (distance < 10) {
+              toRemove.add(egg.id);
               if (popSoundRef.current) {
                 popSoundRef.current.currentTime = 0;
                 popSoundRef.current.play().catch(() => {});
               }
               setScore(s => s + 1);
-              setEggs(prev => prev.filter(e => e.id !== egg.id));
             }
           }
         });
 
-        // Remove eggs that fell off screen
+        // Remove caught eggs and check for missed
         const filtered = updated.filter(egg => {
+          if (toRemove.has(egg.id)) return false;
+          
           if (egg.y > 100) {
             setMissed(m => {
               const newMissed = m + 1;
@@ -117,21 +142,30 @@ export default function EggCatchGame({ onClose }: { onClose: () => void }) {
 
         return filtered;
       });
-    }, 50);
 
-    return () => clearInterval(interval);
+      animationFrameRef.current = requestAnimationFrame(gameLoop);
+    };
+
+    animationFrameRef.current = requestAnimationFrame(gameLoop);
+
+    return () => {
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
+      }
+    };
   }, [basketX, gameOver]);
 
-  const handleRestart = () => {
+  const handleRestart = useCallback(() => {
     setScore(0);
     setMissed(0);
     setGameOver(false);
     setEggs([]);
+    lastUpdateRef.current = Date.now();
     if (bgMusicRef.current) {
       bgMusicRef.current.currentTime = 0;
       bgMusicRef.current.play().catch(() => {});
     }
-  };
+  }, []);
 
   return (
     <div className="fixed inset-0 bg-gradient-to-b from-sky-300 via-sky-200 to-green-200 z-[100] overflow-hidden">
@@ -155,7 +189,7 @@ export default function EggCatchGame({ onClose }: { onClose: () => void }) {
         {eggs.map(egg => (
           <div
             key={egg.id}
-            className="absolute text-6xl transition-none pointer-events-none"
+            className="absolute text-6xl pointer-events-none will-change-transform"
             style={{
               left: `${egg.x}%`,
               top: `${egg.y}%`,
@@ -168,7 +202,7 @@ export default function EggCatchGame({ onClose }: { onClose: () => void }) {
 
         {/* Basket */}
         <div
-          className="absolute bottom-8 transition-all duration-100 pointer-events-none"
+          className="absolute bottom-8 pointer-events-none will-change-transform"
           style={{
             left: `${basketX}%`,
             transform: 'translateX(-50%)'
