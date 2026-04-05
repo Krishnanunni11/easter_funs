@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import EggCatchGame from "./eggcatchgame";
 
 const EggTop = () => (
   <svg width="120" height="90" viewBox="0 0 160 120">
@@ -35,6 +36,7 @@ export default function EasterEgg() {
   const [explosionInterval, setExplosionInterval] = useState<NodeJS.Timeout | null>(null);
   const [popSound, setPopSound] = useState<HTMLAudioElement | null>(null);
   const [bgMusic, setBgMusic] = useState<HTMLAudioElement | null>(null);
+  const [showGame, setShowGame] = useState(false);
 
   const memeSrcs = ["/mem1.png", "/mem2.png", "/mem3.png"];
   const confettiColors = ["#FF6B9D", "#C44569", "#FFC312", "#12CBC4", "#FDA7DF", "#ED4C67", "#F79F1F", "#A3CB38", "#FF5733", "#C70039", "#900C3F", "#581845"];
@@ -226,6 +228,9 @@ export default function EasterEgg() {
 
   return (
     <>
+      {/* Egg Catch Game */}
+      {showGame && <EggCatchGame onClose={() => setShowGame(false)} />}
+
       {/* Particles Burst - Above everything */}
       <div className="fixed inset-0 pointer-events-none z-50">
         {particles.map((particle) => (
@@ -365,6 +370,19 @@ export default function EasterEgg() {
               )}
             </div>
           </div>
+        </div>
+
+        {/* Game Button */}
+        <div className="mt-6 flex justify-center">
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setShowGame(true);
+            }}
+            className="bg-gradient-to-r from-purple-500 to-pink-500 text-white px-8 py-4 rounded-full shadow-lg hover:shadow-xl hover:scale-105 transition-all font-bold text-xl"
+          >
+            🎮 Play Egg Catch Game
+          </button>
         </div>
       </div>
     </>
