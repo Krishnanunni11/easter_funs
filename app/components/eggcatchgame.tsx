@@ -20,13 +20,14 @@ export default function EggCatchGame({ onClose }: { onClose: () => void }) {
   const bgMusicRef = useRef<HTMLAudioElement | null>(null);
   const popSoundRef = useRef<HTMLAudioElement | null>(null);
   const eggIdCounter = useRef(0);
-  const animationFrameRef = useRef<number>();
-  const lastUpdateRef = useRef<number>(Date.now());
+  const animationFrameRef = useRef<number>(0);
+  const lastUpdateRef = useRef<number>(0);
 
   const eggEmojis = ["🥚", "🐣", "🐥", "🥚", "🐣"];
 
   // Initialize audio
   useEffect(() => {
+    lastUpdateRef.current = Date.now();
     const bgMusic = new Audio('/easter-music.mp3');
     bgMusic.loop = true;
     bgMusic.volume = 0.5;
