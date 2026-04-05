@@ -1,0 +1,17 @@
+Please add your audio files here:
+
+1. pop.mp3 - Pop sound effect that plays on every egg click
+2. easter-music.mp3 - Background music that plays on 5th click (loops)
+
+The sounds should be in MP3 format.
+
+Supported formats:
+- pop.mp3 (required for click sound)
+- easter-music.mp3 (required for party mode)
+
+Alternative formats (if needed):
+- pop.wav, pop.ogg
+- easter-music.wav, easter-music.ogg
+
+If you use different names or formats, update the code in:
+app/components/easteregg.tsx (lines ~135 and ~149)

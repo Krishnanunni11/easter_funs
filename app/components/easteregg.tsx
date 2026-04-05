@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 const EggTop = () => (
   <svg width="120" height="90" viewBox="0 0 160 120">
@@ -29,23 +29,54 @@ export default function EasterEgg() {
   const [memes, setMemes] = useState<any[]>([]);
   const [confetti, setConfetti] = useState<any[]>([]);
   const [particles, setParticles] = useState<any[]>([]);
+  const [popCount, setPopCount] = useState(0);
+  const [isSpecialMode, setIsSpecialMode] = useState(false);
+  const [audioElement, setAudioElement] = useState<HTMLAudioElement | null>(null);
+  const [explosionInterval, setExplosionInterval] = useState<NodeJS.Timeout | null>(null);
+  const [popSound, setPopSound] = useState<HTMLAudioElement | null>(null);
+  const [bgMusic, setBgMusic] = useState<HTMLAudioElement | null>(null);
 
   const memeSrcs = ["/mem1.png", "/mem2.png", "/mem3.png"];
   const confettiColors = ["#FF6B9D", "#C44569", "#FFC312", "#12CBC4", "#FDA7DF", "#ED4C67", "#F79F1F", "#A3CB38", "#FF5733", "#C70039", "#900C3F", "#581845"];
 
-  const handleOpen = () => {
-    if (isOpen) return;
-    setIsOpen(true);
+  // Preload audio files
+  useEffect(() => {
+    console.log('Preloading audio files...');
+    const pop = new Audio('/pop.mp3');
+    pop.preload = 'auto';
+    pop.addEventListener('canplaythrough', () => console.log('Pop sound loaded'));
+    pop.addEventListener('error', (e) => console.error('Pop sound error:', e));
+    setPopSound(pop);
 
-    // Generate Memes with more randomization
-    const memeCount = 100;
+    const music = new Audio('/easter-music.mp3');
+    music.preload = 'auto';
+    music.loop = true;
+    music.addEventListener('canplaythrough', () => console.log('Easter music loaded'));
+    music.addEventListener('error', (e) => console.error('Easter music error:', e));
+    setBgMusic(music);
+
+    // Cleanup only on unmount
+    return () => {
+      pop.pause();
+      pop.src = '';
+      music.pause();
+      music.src = '';
+    };
+  }, []);
+
+  const generateExplosion = () => {
+    const timestamp = Date.now();
+    const random = Math.random();
+
+    // Generate Memes
+    const memeCount = 70;
     const generatedMemes = Array.from({ length: memeCount }).map((_, i) => {
       const angle = (Math.random() * Math.PI * 2);
       const distance = 300 + Math.random() * 600;
       const xOffset = Math.cos(angle) * distance;
       
       return {
-        id: `meme-${i}`,
+        id: `meme-${i}-${timestamp}-${random}`,
         src: memeSrcs[Math.floor(Math.random() * memeSrcs.length)],
         x: xOffset,
         peak: 200 + Math.random() * 300,
@@ -56,7 +87,7 @@ export default function EasterEgg() {
       };
     });
 
-    // Generate Confetti with varied trajectories
+    // Generate Confetti
     const confettiCount = 200;
     const generatedConfetti = Array.from({ length: confettiCount }).map((_, i) => {
       const angle = (Math.random() * Math.PI * 2);
@@ -64,7 +95,7 @@ export default function EasterEgg() {
       const xOffset = Math.cos(angle) * distance;
       
       return {
-        id: `confetti-${i}`,
+        id: `confetti-${i}-${timestamp}-${random}`,
         color: confettiColors[Math.floor(Math.random() * confettiColors.length)],
         x: xOffset,
         peak: 250 + Math.random() * 350,
@@ -76,13 +107,13 @@ export default function EasterEgg() {
       };
     });
 
-    // Generate Particles with radial burst
+    // Generate Particles
     const particleCount = 100;
     const generatedParticles = Array.from({ length: particleCount }).map((_, i) => {
       const angle = (i / particleCount) * Math.PI * 2 + (Math.random() - 0.5) * 0.5;
       const distance = 250 + Math.random() * 450;
       return {
-        id: `particle-${i}`,
+        id: `particle-${i}-${timestamp}-${random}`,
         x: Math.cos(angle) * distance,
         y: Math.sin(angle) * distance,
         delay: Math.random() * 0.15,
@@ -92,22 +123,106 @@ export default function EasterEgg() {
       };
     });
 
-    setMemes(generatedMemes);
-    setConfetti(generatedConfetti);
-    setParticles(generatedParticles);
+    setMemes(prev => [...prev, ...generatedMemes]);
+    setConfetti(prev => [...prev, ...generatedConfetti]);
+    setParticles(prev => [...prev, ...generatedParticles]);
 
-    // Auto reset after 10 seconds
+    // Clean up old explosions after they finish animating
+    setTimeout(() => {
+      setMemes(prev => prev.filter(m => !generatedMemes.find(gm => gm.id === m.id)));
+      setConfetti(prev => prev.filter(c => !generatedConfetti.find(gc => gc.id === c.id)));
+      setParticles(prev => prev.filter(p => !generatedParticles.find(gp => gp.id === p.id)));
+    }, 6000);
+  };
+
+  const handleOpen = () => {
+    console.log('Egg clicked! isOpen:', isOpen);
+    if (isOpen) return;
+    setIsOpen(true);
+
+    // Play pop sound on every click (instant playback)
+    if (popSound) {
+      popSound.currentTime = 0; // Reset to start
+      popSound.play().catch(err => console.log('Pop sound failed:', err));
+    }
+
+    // Increment pop count
+    const newPopCount = popCount + 1;
+    setPopCount(newPopCount);
+    console.log('Pop count:', newPopCount);
+
+    // Generate explosion
+    generateExplosion();
+
+    // Check if this is the 2nd pop
+    if (newPopCount === 2 && !isSpecialMode) {
+      setIsSpecialMode(true);
+      console.log('🎉 Special mode activated!');
+      
+      // Play background music with a small delay to avoid conflicts
+      setTimeout(() => {
+        if (bgMusic) {
+          console.log('Attempting to play easter music...');
+          bgMusic.currentTime = 0;
+          bgMusic.volume = 0.7;
+          
+          const playPromise = bgMusic.play();
+          if (playPromise !== undefined) {
+            playPromise
+              .then(() => {
+                console.log('✅ Easter music playing!');
+                setAudioElement(bgMusic);
+              })
+              .catch(err => {
+                console.error('❌ Music play failed:', err);
+              });
+          }
+        } else {
+          console.error('❌ bgMusic is null!');
+        }
+      }, 100);
+
+      // Start infinite explosions every 3 seconds
+      const interval = setInterval(() => {
+        generateExplosion();
+      }, 3000);
+      setExplosionInterval(interval);
+
+      // Activate DJ mode
+      const mainContainer = document.getElementById('main-container');
+      const djLights = document.getElementById('dj-lights');
+      if (mainContainer && djLights) {
+        mainContainer.classList.add('dj-mode');
+        djLights.classList.remove('hidden');
+      }
+    }
+
+    // Auto reset after 10 seconds (but keep special mode active)
     setTimeout(() => {
       handleReset();
-    }, 70000);
+    }, 5000);
   };
 
   const handleReset = () => {
     setIsOpen(false);
-    setMemes([]);
-    setConfetti([]);
-    setParticles([]);
+    // Don't clear memes/confetti/particles in special mode - they clean themselves up
+    if (!isSpecialMode) {
+      setMemes([]);
+      setConfetti([]);
+      setParticles([]);
+    }
   };
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (explosionInterval) {
+        clearInterval(explosionInterval);
+      }
+      // Don't cleanup audio if it's playing
+      // Audio will be cleaned up when component unmounts completely
+    };
+  }, [explosionInterval]);
 
   return (
     <>
@@ -171,22 +286,22 @@ export default function EasterEgg() {
 
       {/* Center Meme - Above card */}
       <div 
-        className={`fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 transition-all duration-1000 pointer-events-none ${
-          isOpen ? 'opacity-100 scale-110' : 'opacity-0 scale-0'
+        className={`fixed ${isSpecialMode ? 'spinning-orbit' : 'top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2'} z-50 transition-all duration-1000 pointer-events-none ${
+          isOpen || isSpecialMode ? 'opacity-100 scale-110' : 'opacity-0 scale-0'
         }`}
-        style={{ transitionDelay: '0.8s' }}
+        style={{ transitionDelay: isSpecialMode ? '0s' : '0.8s' }}
       >
         <img
           src="/mem1.png"
           alt="Meme"
-          className="w-44 h-44 object-cover"
+          className="w-44 h-44 rounded-full border-8 border-white shadow-2xl object-cover"
         />
       </div>
 
-      {/* Easter Message - Appears after center meme */}
+      {/* Easter Message - Appears after center meme (only in normal mode) */}
       <div 
         className={`fixed top-[60%] left-1/2 -translate-x-1/2 z-50 transition-all duration-1000 pointer-events-none ${
-          isOpen ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'
+          isOpen && !isSpecialMode ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'
         }`}
         style={{ transitionDelay: '1.5s' }}
       >
@@ -197,19 +312,29 @@ export default function EasterEgg() {
         </div>
       </div>
 
+      {/* Special Mode Message */}
+      {isSpecialMode && (
+        <div className="fixed top-[20%] left-1/2 -translate-x-1/2 z-50 pointer-events-none">
+          <div className="bg-gradient-to-r from-yellow-400 via-red-500 to-pink-500 text-white px-10 py-6 rounded-3xl shadow-2xl border-4 border-white animate-bounce">
+            <p className="text-3xl md:text-4xl font-bold text-center fast-blink">
+              🎉 EASTER MODE ACTIVATED! 🎉
+            </p>
+            <p className="text-lg text-center mt-2 fast-blink">Infinite Explosions!</p>
+          </div>
+        </div>
+      )}
+
       {/* Main Card */}
-      <div className="relative">
+      <div className={`relative z-20 transition-opacity duration-1000 ${isSpecialMode ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
         <div 
-          className={`bg-white/70 backdrop-blur-sm rounded-3xl shadow-2xl p-12 max-w-2xl mx-auto text-center ${
-            'cursor-pointer hover:shadow-3xl'
-          } transition-shadow relative z-20`}
+          className="bg-white/70 backdrop-blur-sm rounded-3xl shadow-2xl p-12 max-w-2xl mx-auto text-center cursor-pointer hover:shadow-3xl transition-shadow relative"
           onClick={handleOpen}
         >
           <h1 className="text-6xl font-bold mb-2">
-            <span className="text-rose-600">HAPPI EASTER</span>
+            <span className="text-rose-600">EASTER</span>
           </h1>
           <h2 className="text-6xl font-bold mb-4">
-            <span className="text-green-700">EGG-SURPRISE</span>
+            <span className="text-green-700">EGG-CELLENCE</span>
           </h2>
           <p className="text-amber-700 text-lg font-medium tracking-wider uppercase">
             The hunt for memes begins
@@ -235,25 +360,12 @@ export default function EasterEgg() {
               </div>
               {!isOpen && (
                 <p className="mt-4 text-sm text-gray-600 font-medium animate-pulse">
-                  Click to crack the egg! 🥚
+                  Click to crack the egg! 🥚 {popCount > 0 && `(${popCount}/2)`}
                 </p>
               )}
             </div>
           </div>
         </div>
-
-        {/* Reset Button */}
-        {isOpen && (
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              handleReset();
-            }}
-            className="absolute top-4 right-4 bg-white/90 backdrop-blur-sm text-gray-800 px-6 py-2 rounded-full shadow-lg hover:bg-white transition z-50 font-medium"
-          >
-            Replay 🔄
-          </button>
-        )}
       </div>
     </>
   );

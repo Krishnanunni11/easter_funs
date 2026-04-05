@@ -121,6 +121,114 @@
   }
 }
 
+@keyframes orbit {
+  0% {
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) rotate(0deg);
+  }
+  12.5% {
+    top: 30%;
+    left: 70%;
+    transform: translate(-50%, -50%) rotate(45deg);
+  }
+  25% {
+    top: 20%;
+    left: 80%;
+    transform: translate(-50%, -50%) rotate(90deg);
+  }
+  37.5% {
+    top: 30%;
+    left: 90%;
+    transform: translate(-50%, -50%) rotate(135deg);
+  }
+  50% {
+    top: 50%;
+    left: 90%;
+    transform: translate(-50%, -50%) rotate(180deg);
+  }
+  62.5% {
+    top: 70%;
+    left: 80%;
+    transform: translate(-50%, -50%) rotate(225deg);
+  }
+  75% {
+    top: 80%;
+    left: 50%;
+    transform: translate(-50%, -50%) rotate(270deg);
+  }
+  87.5% {
+    top: 70%;
+    left: 20%;
+    transform: translate(-50%, -50%) rotate(315deg);
+  }
+  100% {
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) rotate(360deg);
+  }
+}
+
+@keyframes djLights {
+  0%, 100% {
+    background: #0a0a0a;
+  }
+  50% {
+    background: #1a1a1a;
+  }
+}
+
+@keyframes strobeLight {
+  0%, 49% {
+    opacity: 0;
+  }
+  50%, 100% {
+    opacity: 0.8;
+  }
+}
+
+@keyframes colorFlash {
+  0% { background-color: #ff00ff; }
+  20% { background-color: #00ffff; }
+  40% { background-color: #ffff00; }
+  60% { background-color: #ff0080; }
+  80% { background-color: #00ff00; }
+  100% { background-color: #ff00ff; }
+}
+
+@keyframes pulse360 {
+  0%, 100% {
+    transform: scale(1) rotate(0deg);
+    opacity: 0.8;
+  }
+  50% {
+    transform: scale(1.5) rotate(180deg);
+    opacity: 1;
+  }
+}
+
+.spinning-orbit {
+  animation: orbit 10s linear infinite;
+  opacity: 1 !important;
+  z-index: 60 !important;
+}
+
+.dj-mode {
+  animation: djLights 2s ease-in-out infinite;
+}
+
+.strobe-light {
+  animation: strobeLight 0.1s steps(1) infinite;
+}
+
+.color-flash {
+  animation: colorFlash 1s linear infinite;
+}
+
+.pulse-360 {
+  animation: pulse360 2s ease-in-out infinite;
+}
+
 body {
   background: linear-gradient(135deg, #fef3e2 0%, #fef9f0 50%, #f0f9f4 100%);
   min-height: 100vh;
@@ -159,4 +267,17 @@ body {
   animation: lightPulse 3s ease-in-out infinite;
   pointer-events: none;
   z-index: 0;
+}
+
+@keyframes fastBlink {
+  0%, 49% {
+    opacity: 1;
+  }
+  50%, 100% {
+    opacity: 0.3;
+  }
+}
+
+.fast-blink {
+  animation: fastBlink 0.5s ease-in-out infinite;
 }
